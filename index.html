@@ -1034,9 +1034,9 @@ function parseCSV(text){
     if(!hh) return;
     if(/날짜|date/.test(hh)){ idx.date=i; hasHead=true; }
     else if(/시간|time/.test(hh)){ idx.time=i; hasHead=true; }
-    else if(/수축|systol|sbp/.test(hh)) idx.sys=i;
-    else if(/이완|diastol|dbp/.test(hh)) idx.dia=i;
-    else if(/심박|맥박|pulse|heart|bpm/.test(hh)) idx.bpm=i;
+    else if(/수축|systol|sbp|\bsys\b/.test(hh)) idx.sys=i;
+    else if(/이완|diastol|dbp|\bdia\b/.test(hh)) idx.dia=i;
+    else if(/심박|맥박|pulse|heart|bpm|\bpul\b/.test(hh)) idx.bpm=i;
     else if(/태그|tag/.test(hh)) idx.tags=i;
     else if(/메모|note|memo/.test(hh)) idx.memo=i;
   });
