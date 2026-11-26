@@ -74,22 +74,29 @@ svg{display:block}
 }
 .brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:16px;letter-spacing:-.01em;white-space:nowrap;min-width:0}
 .brand svg{width:19px;height:19px;fill:var(--pink);stroke:none;flex:0 0 auto}
+/* 앱 아이콘 (홈 화면 아이콘과 같은 이미지) */
+.brand .appico{
+  width:26px;height:26px;flex:0 0 auto;display:block;
+  border-radius:7px;box-shadow:0 0 0 1px rgba(20,24,35,.07), 0 1px 2px rgba(20,24,35,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .brand .appico{box-shadow:0 0 0 1px rgba(255,255,255,.16), 0 1px 3px rgba(0,0,0,.4)}}
+:root[data-theme="dark"] .brand .appico{box-shadow:0 0 0 1px rgba(255,255,255,.16), 0 1px 3px rgba(0,0,0,.4)}
 .brand .byline{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;padding-top:2px;flex:0 0 auto}
 .hcount{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* ---------- panes ---------- */
-.pane{display:none;padding:14px 12px 8px}
+.pane{display:none;padding:10px 12px 8px}
 .pane.active{display:block}
 .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);margin-bottom:14px}
 
 /* ---------- stage header ---------- */
-.stageHead{padding:6px 0 0;text-align:center}
+.stageHead{padding:0;text-align:center}
 .stageName{
-  font-size:23px;font-weight:800;font-style:italic;letter-spacing:-.02em;color:var(--text);
+  font-size:20px;font-weight:800;font-style:italic;letter-spacing:-.02em;color:var(--text);
   transition:color .2s;
 }
-.stageBarWrap{position:relative;height:78px;margin:10px 0 4px}
-.stageBar{position:absolute;left:0;right:0;top:26px;height:18px;display:flex;gap:2px}
+.stageBarWrap{position:relative;height:60px;margin:8px 0 2px}
+.stageBar{position:absolute;left:0;right:0;top:20px;height:16px;display:flex;gap:2px}
 .stageBar i{flex:1 1 0;display:block}
 .stageBar i:first-child{border-radius:4px 0 0 4px}
 .stageBar i:last-child{border-radius:0 4px 4px 0}
@@ -99,27 +106,27 @@ svg{display:block}
 .stageBar i:nth-child(4){background:var(--c3)}
 .stageBar i:nth-child(5){background:var(--c4)}
 .marker{position:absolute;top:0;width:0;left:50%;transition:left .3s cubic-bezier(.22,1,.36,1)}
-.marker .stick{position:absolute;left:-2.5px;top:0;width:5px;height:27px;background:#1d1d1f;border-radius:2px}
+.marker .stick{position:absolute;left:-2.5px;top:0;width:5px;height:21px;background:#1d1d1f;border-radius:2px}
 .marker .heart{
-  position:absolute;left:-13px;top:46px;width:26px;height:26px;
-  font-size:24px;line-height:26px;text-align:center;color:#ef3f78;
+  position:absolute;left:-11px;top:34px;width:22px;height:22px;
+  font-size:20px;line-height:22px;text-align:center;color:#ef3f78;
 }
 :root[data-theme="dark"] .marker .stick{background:#e8ebf0}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .marker .stick{background:#e8ebf0}}
 
 /* ---------- pickers ---------- */
-.pickCard{padding:16px 12px 12px}
+.pickCard{padding:12px 12px 8px}
 .picks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px}
 .pick{text-align:center;min-width:0}
-.pickLabel{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.pickLabel{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.01em}
 .pickUnit{font-size:11.5px;color:var(--muted);margin-top:1px;letter-spacing:.02em}
 .wheel{
-  position:relative;height:168px;margin-top:8px;overflow:hidden;touch-action:pan-y;
+  position:relative;height:144px;margin-top:6px;overflow:hidden;touch-action:pan-y;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
 }
 /* 가장자리 흐림: mask 대신 덮개로 처리해 손가락으로 미는 동안 다시 그리는 부담을 줄임 */
 .wheel::before,.wheel::after{
-  content:"";position:absolute;left:0;right:0;height:50px;z-index:2;pointer-events:none;
+  content:"";position:absolute;left:0;right:0;height:42px;z-index:2;pointer-events:none;
 }
 .wheel::before{top:0;background:linear-gradient(180deg,var(--card) 0%,var(--card) 46%,transparent 100%)}
 .wheel::after{bottom:0;background:linear-gradient(0deg,var(--card) 0%,var(--card) 46%,transparent 100%)}
@@ -129,10 +136,10 @@ svg{display:block}
   -webkit-overflow-scrolling:touch;
 }
 .wscroll::-webkit-scrollbar{display:none}
-.wpad{height:56px;pointer-events:none}
+.wpad{height:48px;pointer-events:none}
 .wcell{
-  height:56px;line-height:56px;text-align:center;
-  font-size:23px;color:var(--muted);font-variant-numeric:tabular-nums;
+  height:48px;line-height:48px;text-align:center;
+  font-size:22px;color:var(--muted);font-variant-numeric:tabular-nums;
   scroll-snap-align:center;user-select:none;-webkit-user-select:none;
   transform:scale(1);transition:color .16s,transform .16s;
 }
@@ -141,17 +148,17 @@ svg{display:block}
 .wheeling .wcell{transition:none}
 .wheeling .marker{transition:none}
 .wheeling .stageName{transition:none}
-.wlines{position:absolute;left:6px;right:6px;top:56px;height:56px;pointer-events:none}
+.wlines{position:absolute;left:6px;right:6px;top:48px;height:48px;pointer-events:none}
 .wlines::before,.wlines::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--line2)}
 .wlines::before{top:0}
 .wlines::after{bottom:0}
-.pickHint{text-align:center;font-size:11.5px;color:var(--muted);margin:6px 0 2px}
+.pickHint{text-align:center;font-size:11px;color:var(--muted);margin:4px 0 0}
 
 /* ---------- meta row ---------- */
-.metaRow{display:flex;align-items:center;gap:2px;margin:10px 2px 0;padding-top:12px;border-top:1px solid var(--line)}
+.metaRow{display:flex;align-items:center;gap:2px;margin:8px 2px 0;padding-top:8px;border-top:1px solid var(--line)}
 .metaField{
   position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:6px;
-  height:44px;padding:0 6px;border-radius:10px;color:var(--sub);
+  height:40px;padding:0 6px;border-radius:10px;color:var(--sub);
 }
 .metaField:active{background:var(--inputBg)}
 .metaField svg{width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
@@ -164,10 +171,10 @@ svg{display:block}
 #tagBtn.has svg{stroke:var(--indigo-d)}
 
 /* ---------- chips ---------- */
-.chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;padding:12px 2px 2px}
+.chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 2px 0}
 .chips::-webkit-scrollbar{display:none}
 .chip{
-  flex:0 0 auto;height:32px;padding:0 13px;border-radius:999px;border:1px solid var(--line2);
+  flex:0 0 auto;height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line2);
   background:var(--card);color:var(--sub);font-size:13.5px;display:flex;align-items:center;
 }
 .chip.on{background:var(--indigo);border-color:var(--indigo);color:#fff;font-weight:600}
@@ -175,14 +182,14 @@ svg{display:block}
 
 /* ---------- submit ---------- */
 .submit{
-  display:block;width:100%;height:58px;margin-top:12px;border-radius:11px;
+  display:block;width:100%;height:52px;margin-top:10px;border-radius:11px;
   background:var(--indigo);color:#fff;font-size:18px;font-weight:700;letter-spacing:.06em;
   box-shadow:0 6px 16px rgba(90,85,180,.28);
   transition:transform .08s, box-shadow .2s, background .2s;
 }
 .submit:active{transform:scale(.988);box-shadow:0 2px 8px rgba(90,85,180,.3)}
 .submit.flash{background:#4a46a2}
-.saveNote{min-height:18px;text-align:center;font-size:12.5px;color:var(--sub);margin-top:8px;font-variant-numeric:tabular-nums}
+.saveNote{min-height:16px;text-align:center;font-size:12px;color:var(--sub);margin-top:4px;font-variant-numeric:tabular-nums}
 .saveNote b{color:var(--indigo-d)}
 
 /* ---------- reference table ---------- */
@@ -374,7 +381,7 @@ svg{display:block}
 <header class="appbar">
   <div class="in">
     <div class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.6-4.7-9.3-9.1C1.3 8.3 3.4 4.8 6.9 4.4c2.1-.2 3.9 1 5.1 2.6 1.2-1.6 3-2.8 5.1-2.6 3.5.4 5.6 3.9 4.2 7.5C19.6 16.3 12 21 12 21z"/></svg>
+      <img class="appico" src="./icon-192.png" width="26" height="26" alt="" aria-hidden="true" decoding="async">
       <span class="appName">혈압 일지</span><span class="byline">by 이성현</span>
     </div>
     <div class="hcount" id="hcount">기록 0건</div>
@@ -426,7 +433,7 @@ svg{display:block}
       </div>
 
       <div class="chips" id="quickChips"></div>
-      <button class="submit" id="btnSave" data-act="save">입력</button>
+      <button class="submit" id="btnSave" data-act="save">저장</button>
       <div class="saveNote" id="saveNote"></div>
     </div>
 
@@ -659,7 +666,7 @@ function cmpRec(a,b){
 function newestFirst(a,b){ return -cmpRec(a,b); }
 
 /* ================= 휠 피커 ================= */
-var ROW=56;
+var ROW=48;
 var WH={sys:{min:50,max:260}, dia:{min:30,max:160}, bpm:{min:30,max:200}};
 var wheels={};
 function buildWheel(key){
@@ -1066,7 +1073,7 @@ function renderSettings(){
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
     + '</div></div>';
   h+='<div class="secTitle">정보</div><div class="card rows">'
-    + srowHTML('about','info','앱 정보','혈압 일지 v1.0 · 오프라인 사용')
+    + srowHTML('about','info','앱 정보','혈압 일지 v1.2 · 오프라인 사용')
     + '</div>';
   h+='<p class="disclaimer">이 앱은 개인 기록용입니다. 약 복용이나 치료는 반드시 의사와 상의하세요.</p>';
   host.innerHTML=h;
@@ -1468,7 +1475,7 @@ function copySheetText(){
 function openAboutSheet(){
   openSheet('<div class="sheetHead"><b>앱 정보</b><button data-act="close-sheet" aria-label="닫기">✕</button></div>'
     + '<div class="sheetBody"><div class="infoCard" style="padding:0 0 6px">'
-    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.1</span></div>'
+    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.2</span></div>'
     + '<div class="kv"><span>기록</span><span>'+db.records.length+'건</span></div>'
     + '<div class="kv"><span>저장 크기</span><span>'+esc(bytesHint())+'</span></div>'
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
