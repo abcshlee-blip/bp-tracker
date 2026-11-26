@@ -115,19 +115,32 @@ svg{display:block}
 .pickUnit{font-size:11.5px;color:var(--muted);margin-top:1px;letter-spacing:.02em}
 .wheel{
   position:relative;height:168px;margin-top:8px;overflow:hidden;touch-action:pan-y;
-  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 22%,#000 78%,transparent 100%);
-  mask-image:linear-gradient(180deg,transparent 0,#000 22%,#000 78%,transparent 100%);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
 }
-.wscroll{height:100%;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain}
+/* 가장자리 흐림: mask 대신 덮개로 처리해 손가락으로 미는 동안 다시 그리는 부담을 줄임 */
+.wheel::before,.wheel::after{
+  content:"";position:absolute;left:0;right:0;height:50px;z-index:2;pointer-events:none;
+}
+.wheel::before{top:0;background:linear-gradient(180deg,var(--card) 0%,var(--card) 46%,transparent 100%)}
+.wheel::after{bottom:0;background:linear-gradient(0deg,var(--card) 0%,var(--card) 46%,transparent 100%)}
+.wscroll{
+  height:100%;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;
+  scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;
+}
 .wscroll::-webkit-scrollbar{display:none}
 .wpad{height:56px;pointer-events:none}
 .wcell{
   height:56px;line-height:56px;text-align:center;
   font-size:23px;color:var(--muted);font-variant-numeric:tabular-nums;
-  scroll-snap-align:center;scroll-snap-stop:always;user-select:none;
-  transition:color .12s,font-size .12s;
+  scroll-snap-align:center;user-select:none;-webkit-user-select:none;
+  transform:scale(1);transition:color .16s,transform .16s;
 }
-.wcell.on{color:var(--pink);font-size:29px;font-weight:700}
+.wcell.on{color:var(--pink);font-weight:700;transform:scale(1.22)}
+/* 손가락으로 미는 동안에는 전환이 따라붙지 않게 (따라오는 느낌·깜빡임 제거) */
+.wheeling .wcell{transition:none}
+.wheeling .marker{transition:none}
+.wheeling .stageName{transition:none}
 .wlines{position:absolute;left:6px;right:6px;top:56px;height:56px;pointer-events:none}
 .wlines::before,.wlines::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--line2)}
 .wlines::before{top:0}
@@ -314,7 +327,7 @@ svg{display:block}
   -webkit-appearance:none;appearance:none;
 }
 .field textarea{height:auto;min-height:64px;padding:10px 12px;resize:vertical;line-height:1.5}
-.field input[type=number]{font-variant-numeric:tabular-nums}
+.field input[type=number],.grid3 input,.numIn input{font-variant-numeric:tabular-nums}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .sheetFoot{display:flex;gap:10px;margin-top:12px}
@@ -325,7 +338,13 @@ svg{display:block}
 :root[data-theme="dark"] .btnDanger{background:#3a1f1e;color:#f2a9a2}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btnDanger{background:#3a1f1e;color:#f2a9a2}}
 .numIn{display:flex;align-items:center;gap:10px}
-.numIn input{flex:1 1 auto;text-align:center;font-size:28px;font-weight:700;height:60px;color:var(--pink)}
+.numIn input{
+  flex:1 1 auto;text-align:center;font-size:28px;font-weight:700;height:60px;color:var(--pink);
+  border:1px solid var(--line2);border-radius:13px;background:var(--inputBg);
+  outline:none;-webkit-appearance:none;appearance:none;padding:0 6px;letter-spacing:.02em;
+}
+.numIn input:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(236,63,125,.12)}
+.numIn input::selection{background:rgba(236,63,125,.25)}
 .numIn button{flex:0 0 auto;width:46px;height:46px;border-radius:12px;background:var(--inputBg);font-size:20px;color:var(--sub)}
 .sheetHint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
 .copied{width:100%;height:120px;border-radius:10px;border:1px solid var(--line2);background:var(--inputBg);padding:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.4;color:var(--sub)}
@@ -347,7 +366,7 @@ svg{display:block}
   .pane{padding:20px 18px 12px}
   .stageName{font-size:26px}
   .wcell{font-size:25px}
-  .wcell.on{font-size:31px}
+  .wcell.on{transform:scale(1.22)}
 }
 </style>
 </head>
@@ -655,42 +674,107 @@ function buildWheel(key){
   host.innerHTML='<div class="wscroll">'+html+'</div><div class="wlines"></div>';
   var sc=host.querySelector('.wscroll');
   var cells=host.querySelectorAll('.wcell');
-  var w=wheels[key]={host:host, sc:sc, cells:cells, min:conf.min, max:conf.max, val:S[key], onCell:null, raf:0};
+  var w=wheels[key]={host:host, sc:sc, cells:cells, min:conf.min, max:conf.max, val:S[key], onCell:null, raf:0, lastDrag:0};
   sc.addEventListener('scroll', function(){
+    markWheeling();
     if(w.raf) return;
     var raf=window.requestAnimationFrame||function(fn){ return setTimeout(fn,16); };
     w.raf=raf(function(){ w.raf=0; var idx=Math.round(sc.scrollTop/ROW); setWheel(key, w.min+idx, false); });
-  });
+  }, {passive:true});
+  /* 손가락으로 밀고 난 뒤 따라오는 탭이 숫자 입력창을 여는 것 방지 */
+  var dragFrom=null;
+  host.addEventListener('touchstart', function(e){
+    if(!e.touches || !e.touches.length) return;
+    dragFrom={y:e.touches[0].clientY, x:e.touches[0].clientX, moved:false};
+  }, {passive:true});
+  host.addEventListener('touchmove', function(e){
+    if(!dragFrom || !e.touches || !e.touches.length) return;
+    if(Math.abs(e.touches[0].clientY-dragFrom.y)>8 || Math.abs(e.touches[0].clientX-dragFrom.x)>8) dragFrom.moved=true;
+  }, {passive:true});
+  host.addEventListener('touchend', function(){
+    if(dragFrom && dragFrom.moved) w.lastDrag=Date.now();
+    dragFrom=null;
+  }, {passive:true});
   scrollWheelTo(key, S[key]);
   markWheel(key);
 }
+/* 스크롤이 움직이는 동안 body에 wheeling 클래스를 붙여 전환을 잠시 꺼 둠 */
+var wheelIdleTimer=0;
+function markWheeling(){
+  var b=document.body;
+  if(b && b.classList && !b.classList.contains('wheeling')) b.classList.add('wheeling');
+  if(wheelIdleTimer) clearTimeout(wheelIdleTimer);
+  wheelIdleTimer=setTimeout(function(){
+    var bb=document.body;
+    if(bb && bb.classList) bb.classList.remove('wheeling');
+  }, 170);
+}
+function recentWheelScroll(key){
+  var w=wheels[key];
+  return !!(w && w.lastDrag && (Date.now()-w.lastDrag)<400);
+}
 function markWheel(key){
   var w=wheels[key]; if(!w) return;
-  if(w.onCell && w.onCell.classList) w.onCell.classList.remove('on');
   var cell=w.cells[w.val-w.min];
-  if(cell && cell.classList){ cell.classList.add('on'); w.onCell=cell; }
+  if(!cell || cell===w.onCell) return;
+  if(w.onCell && w.onCell.classList) w.onCell.classList.remove('on');
+  if(cell.classList){ cell.classList.add('on'); w.onCell=cell; }
 }
-function scrollWheelTo(key, v){
+function scrollWheelTo(key, v, smooth){
   var w=wheels[key]; if(!w) return;
   w.val=v;
   var top=(v-w.min)*ROW;
-  if(w.sc && Math.abs((w.sc.scrollTop||0)-top)>0.5) w.sc.scrollTop=top;
+  if(!w.sc) return;
+  if(Math.abs((w.sc.scrollTop||0)-top)<=0.5) return;
+  if(smooth && w.sc.scrollTo){
+    markWheeling();
+    try{ w.sc.scrollTo({top:top, behavior:'smooth'}); return; }catch(e){}
+  }
+  w.sc.scrollTop=top;
 }
 function setWheel(key, v, scroll){
   var w=wheels[key]; if(!w) return;
   v=clamp(Math.round(toNum(v)), w.min, w.max);
   if(!isFinite(v)) v=S[key];
+  var same=(v===w.val && S[key]===v);
   w.val=v; S[key]=v;
-  if(scroll!==false) scrollWheelTo(key, v);
+  if(scroll!==false) scrollWheelTo(key, v, true);
+  if(same && scroll===false) return;   /* 값이 그대로인 프레임은 화면을 건드리지 않음 */
   markWheel(key);
   updateStageUI();
 }
 function updateStageUI(){
   var i=classify(S.sys,S.dia);
   var el=$('stageName');
-  if(el) el.textContent=i<0?'—':STAGES[i].name;
+  if(el){
+    var nm=i<0?'—':STAGES[i].name;
+    if(el.textContent!==nm) el.textContent=nm;
+  }
   var mk=$('marker');
   if(mk) mk.style.left=clamp(stagePos(S.sys,S.dia)*20, 1.4, 98.6)+'%';
+}
+
+/* ================= 입력 값 전체 선택 ================= */
+function focusSelectAll(inp){
+  if(!inp) return;
+  try{ inp.focus(); }catch(e){}
+  var value0=String(inp.value==null?'':inp.value);
+  function sel(){
+    if(String(inp.value==null?'':inp.value)!==value0) return; /* 이미 고쳐 쓰기 시작했으면 건드리지 않음 */
+    try{
+      if(inp.setSelectionRange){ inp.setSelectionRange(0, value0.length); }
+      else if(inp.select){ inp.select(); }
+    }catch(e){
+      try{ if(inp.select) inp.select(); }catch(e2){}
+    }
+  }
+  sel();
+  var raf=window.requestAnimationFrame||function(fn){ return setTimeout(fn,16); };
+  raf(sel);
+  setTimeout(sel, 20);
+  setTimeout(sel, 80);
+  setTimeout(sel, 220);
+  setTimeout(sel, 420);
 }
 
 /* ================= 입력 탭 렌더 ================= */
@@ -1283,13 +1367,12 @@ function openNumSheet(key){
   openSheet('<div class="sheetHead"><b>'+label+' 직접 입력</b><button data-act="close-sheet" aria-label="닫기">✕</button></div>'
     + '<div class="sheetBody"><div class="numIn">'
     + '<button data-act="num-step" data-key="'+key+'" data-d="-1" aria-label="1 줄이기">−</button>'
-    + '<input id="numIn" type="number" inputmode="numeric" value="'+S[key]+'" aria-label="'+label+' 값">'
+    + '<input id="numIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" autocapitalize="off" spellcheck="false" data-selall="1" value="'+S[key]+'" aria-label="'+label+' 값">'
     + '<button data-act="num-step" data-key="'+key+'" data-d="1" aria-label="1 늘리기">+</button>'
     + '</div><div class="sheetHint">'+unit+' · '+c.min+' ~ '+c.max+' 사이로 입력하세요.</div></div>'
     + '<div class="sheetFoot"><button class="btnGhost" data-act="close-sheet">취소</button>'
     + '<button class="btnPrimary" data-act="num-ok" data-key="'+key+'">확인</button></div>');
-  var inp=$('numIn');
-  if(inp && inp.focus){ try{ inp.focus(); }catch(e){} }
+  focusSelectAll($('numIn'));
 }
 function stepNum(el){
   var key=el.getAttribute('data-key'), d=Number(el.getAttribute('data-d'))||1;
@@ -1347,9 +1430,9 @@ function openEditSheet(id){
     + '<div class="sheetBody">'
     + '<div class="field grid2"><div><label>날짜</label><input id="eDate" type="date" value="'+esc(r.date)+'"></div>'
     + '<div><label>시간</label><input id="eTime" type="time" value="'+esc(r.time)+'"></div></div>'
-    + '<div class="field grid3"><div><label>수축기</label><input id="eSys" type="number" inputmode="numeric" value="'+r.sys+'"></div>'
-    + '<div><label>이완기</label><input id="eDia" type="number" inputmode="numeric" value="'+r.dia+'"></div>'
-    + '<div><label>심박수</label><input id="eBpm" type="number" inputmode="numeric" value="'+(r.bpm||'')+'"></div></div>'
+    + '<div class="field grid3"><div><label>수축기</label><input id="eSys" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-selall="1" value="'+r.sys+'"></div>'
+    + '<div><label>이완기</label><input id="eDia" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-selall="1" value="'+r.dia+'"></div>'
+    + '<div><label>심박수</label><input id="eBpm" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-selall="1" value="'+(r.bpm||'')+'"></div></div>'
     + '<div class="field"><label>태그 ( ; 로 구분)</label><input id="eTags" value="'+esc(tagsTxt)+'" placeholder="아침; 운동후"></div>'
     + '<div class="field"><label>메모</label><textarea id="eMemo" placeholder="선택 사항">'+esc(r.memo||'')+'</textarea></div>'
     + '</div><div class="sheetFoot"><button class="btnDanger" data-act="del-rec">삭제</button>'
@@ -1385,7 +1468,7 @@ function copySheetText(){
 function openAboutSheet(){
   openSheet('<div class="sheetHead"><b>앱 정보</b><button data-act="close-sheet" aria-label="닫기">✕</button></div>'
     + '<div class="sheetBody"><div class="infoCard" style="padding:0 0 6px">'
-    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.0</span></div>'
+    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.1</span></div>'
     + '<div class="kv"><span>기록</span><span>'+db.records.length+'건</span></div>'
     + '<div class="kv"><span>저장 크기</span><span>'+esc(bytesHint())+'</span></div>'
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
@@ -1439,6 +1522,7 @@ function onClick(ev){
     case 'tab': setTab(el.getAttribute('data-tab')); break;
     case 'save': saveFromInput(); break;
     case 'wcell':
+      if(recentWheelScroll(key)) break;   /* 방금 손으로 밀었으면 따라오는 탭은 무시 */
       if(el.classList && el.classList.contains('on')) openNumSheet(key);
       else setWheel(key, Number(el.getAttribute('data-v')), true);
       break;
@@ -1491,6 +1575,13 @@ function bindEvents(){
   document.body.addEventListener('change', onChange);
   document.body.addEventListener('input', onInput);
   document.body.addEventListener('keydown', onKeydown);
+  document.body.addEventListener('focusin', onFocusIn);
+}
+/* 숫자 칸에 커서가 들어오면 값 전체를 선택해 두어 바로 덮어 쓸 수 있게 */
+function onFocusIn(ev){
+  var t=ev && ev.target;
+  if(!t || !t.getAttribute) return;
+  if(t.getAttribute('data-selall')) focusSelectAll(t);
 }
 
 /* ================= 매니페스트(홈 화면 추가) ================= */
@@ -1574,7 +1665,19 @@ if(document.readyState==='loading' && document.addEventListener){
 <script>
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
+    navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).then(function(reg){
+      try{ reg.update(); }catch(e){}
+    }).catch(function(){});
+  });
+  /* 새 버전 서비스 워커가 적용되면 한 번만 새로 고침 (입력 중이면 건너뜀) */
+  var hadController=!!navigator.serviceWorker.controller;
+  var swReloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(swReloaded || !hadController) return;
+    var w=document.getElementById('sheetWrap');
+    if(w && w.className && w.className.indexOf('open')>=0) return; /* 시트가 열려 있으면 다음에 */
+    swReloaded=true;
+    try{ location.reload(); }catch(e){}
   });
 }
 </script>

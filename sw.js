@@ -1,5 +1,5 @@
 /* 혈압 일지 — 오프라인 우선 Service Worker */
-const CACHE = 'bp-tracker-v3';
+const CACHE = 'bp-tracker-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -10,7 +10,13 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((cache) => Promise.all(
+        ASSETS.map((u) => fetch(new Request(u, { cache: 'reload' }))
+          .then((res) => (res && res.ok ? cache.put(u, res) : null))
+          .catch(() => null))
+      ))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -26,10 +32,10 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // 페이지 이동은 캐시된 index.html로 먼저 응답 (오프라인에서도 바로 열림)
+  // 페이지 이동은 네트워크 우선 (HTTP 캐시는 재검사) — 새 버전이 바로 반영됨
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req).then((res) => {
+      fetch(req, { cache: 'no-cache' }).then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((cache) => cache.put('./index.html', copy));
         return res;
