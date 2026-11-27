@@ -87,6 +87,12 @@ svg{display:block}
 /* ---------- panes ---------- */
 .pane{display:none;padding:10px 12px 8px}
 .pane.active{display:block}
+/* 스와이프로 탭이 바뀔 때 새 화면이 밀려 들어오는 느낌 */
+.pane.inFromR{animation:swipeInR .19s ease-out}
+.pane.inFromL{animation:swipeInL .19s ease-out}
+@keyframes swipeInR{from{opacity:.4;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes swipeInL{from{opacity:.4;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.pane.inFromR,.pane.inFromL{animation:none}}
 .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);margin-bottom:14px}
 
 /* ---------- stage header ---------- */
@@ -1077,7 +1083,7 @@ function renderSettings(){
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
     + '</div></div>';
   h+='<div class="secTitle">정보</div><div class="card rows">'
-    + srowHTML('about','info','앱 정보','혈압 일지 v1.3 · 오프라인 사용')
+    + srowHTML('about','info','앱 정보','혈압 일지 v1.4 · 오프라인 사용')
     + '</div>';
   h+='<p class="disclaimer">이 앱은 개인 기록용입니다. 약 복용이나 치료는 반드시 의사와 상의하세요.</p>';
   host.innerHTML=h;
@@ -1479,7 +1485,7 @@ function copySheetText(){
 function openAboutSheet(){
   openSheet('<div class="sheetHead"><b>앱 정보</b><button data-act="close-sheet" aria-label="닫기">✕</button></div>'
     + '<div class="sheetBody"><div class="infoCard" style="padding:0 0 6px">'
-    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.3</span></div>'
+    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.4</span></div>'
     + '<div class="kv"><span>기록</span><span>'+db.records.length+'건</span></div>'
     + '<div class="kv"><span>저장 크기</span><span>'+esc(bytesHint())+'</span></div>'
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
@@ -1495,7 +1501,10 @@ function setTab(t){
   S.tab=t;
   ['input','log','stats','settings'].forEach(function(k){
     var p=$('pane-'+k);
-    if(p && p.classList) p.classList.toggle('active', k===t);
+    if(!p) return;
+    /* 스와이프 중 밀려 있던 위치를 원래대로 */
+    if(p.style){ p.style.transition=''; p.style.transform=''; }
+    if(p.classList) p.classList.toggle('active', k===t);
   });
   var tabs=(document.getElementsByClassName?document.getElementsByClassName('tab'):[]);
   for(var i=0;i<tabs.length;i++){
@@ -1595,6 +1604,120 @@ function onFocusIn(ev){
   if(t.getAttribute('data-selall')) focusSelectAll(t);
 }
 
+/* ================= 좌우 스와이프로 탭 전환 ================= */
+var TAB_ORDER=['input','log','stats','settings'];
+var SWIPE_MIN=55;      /* 이만큼 밀어야 탭이 넘어감 */
+var SWIPE_SLOP=12;     /* 이 안쪽의 움직임은 손떨림으로 봄 */
+var swipeStart=null;
+var swipePane=null;
+
+/* 이런 곳에서 시작한 터치는 탭 넘김으로 잡지 않는다 */
+function swipeBlocked(node){
+  var w=$('sheetWrap');
+  if(w && w.classList && w.classList.contains('open')) return true;    /* 시트(모달)가 열려 있음 */
+  var b=document.body;
+  if(b && b.classList && b.classList.contains('wheeling')) return true; /* 휠을 돌리는 중 */
+  var el=node;
+  while(el && el.nodeType===1){
+    var tag=(el.tagName||'').toLowerCase();
+    if(tag==='input' || tag==='textarea' || tag==='select') return true;
+    if(el.isContentEditable) return true;
+    if(el.getAttribute){
+      if(el.getAttribute('contenteditable')==='true') return true;
+      if(el.getAttribute('data-noswipe')) return true;
+    }
+    var cls=el.className;
+    if(cls && cls.baseVal!=null) cls=cls.baseVal;
+    cls=' '+String(cls||'')+' ';
+    if(cls.indexOf(' wheel ')>-1 || cls.indexOf(' wscroll ')>-1 || cls.indexOf(' chips ')>-1 || cls.indexOf(' chip ')>-1) return true;
+    /* 가로로 넘치는 영역(가로 스크롤)은 탭 전환 대상에서 제외 */
+    var st=null;
+    try{ st=window.getComputedStyle?getComputedStyle(el):null; }catch(e){ st=null; }
+    if(st && (st.overflowX==='auto' || st.overflowX==='scroll') && el.scrollWidth && el.clientWidth && el.scrollWidth-el.clientWidth>4) return true;
+    el=el.parentNode;
+  }
+  return false;
+}
+function touchById(list, id){
+  if(!list) return null;
+  for(var i=0;i<list.length;i++){
+    if(list[i] && list[i].identifier===id) return list[i];
+  }
+  return null;
+}
+function paneShift(px){
+  if(!swipePane || !swipePane.style) return;
+  swipePane.style.transition='none';
+  swipePane.style.transform='translateX('+px+'px)';
+}
+function paneReset(){
+  var p=swipePane || $('pane-'+S.tab);
+  swipePane=null;
+  if(!p || !p.style) return;
+  p.style.transition='transform .16s ease-out';
+  p.style.transform='';
+  setTimeout(function(){ if(p.style) p.style.transition=''; }, 220);
+}
+/* dir: 1 = 다음 탭, -1 = 이전 탭 */
+function swipeTab(dir){
+  var i=TAB_ORDER.indexOf(S.tab);
+  if(i<0) i=0;
+  var n=i+dir;
+  if(n<0 || n>=TAB_ORDER.length) return false;
+  setTab(TAB_ORDER[n]);
+  var p=$('pane-'+TAB_ORDER[n]);
+  if(p && p.classList){
+    var cls = dir>0 ? 'inFromR' : 'inFromL';
+    if(p.classList.remove) p.classList.remove('inFromR', 'inFromL');
+    p.classList.add(cls);
+    setTimeout(function(){ if(p.classList) p.classList.remove(cls); }, 280);
+  }
+  return true;
+}
+function bindSwipe(){
+  var host=document.querySelector('.wrap');
+  if(!host || !host.addEventListener) return;
+  host.addEventListener('touchstart', function(e){
+    swipeStart=null;
+    if(!e.touches || e.touches.length!==1) return;   /* 두 손가락은 무시 */
+    if(swipeBlocked(e.target)) return;
+    var t=e.touches[0];
+    swipePane=$('pane-'+S.tab);
+    swipeStart={x:t.clientX, y:t.clientY, id:t.identifier, dx:0, locked:false};
+  }, {passive:true});
+  host.addEventListener('touchmove', function(e){
+    var s=swipeStart;
+    if(!s) return;
+    var t=touchById(e.touches, s.id);
+    if(!t) return;
+    var dx=t.clientX-s.x, dy=t.clientY-s.y;
+    if(!s.locked){
+      if(Math.abs(dx)<SWIPE_SLOP && Math.abs(dy)<SWIPE_SLOP) return;
+      /* 수평 이동이 확실하고 수직보다 충분히 클 때만 가로 제스처로 인정 */
+      if(Math.abs(dx)>=SWIPE_SLOP && Math.abs(dx)>Math.abs(dy)*1.5 && Math.abs(dy)<60){
+        s.locked=true;
+      }else{
+        swipeStart=null; paneReset();   /* 세로 스크롤·휠 돌리기: 손 뗌 */
+        return;
+      }
+    }
+    s.dx=dx;
+    var i=TAB_ORDER.indexOf(S.tab);
+    var atStart=(i<=0 && dx>0), atEnd=(i>=TAB_ORDER.length-1 && dx<0);
+    paneShift(dx*(atStart||atEnd ? 0.22 : 0.4));   /* 양 끝에서는 덜 따라와 넘어가지 않는 느낌 */
+    if(e.cancelable && e.preventDefault){ try{ e.preventDefault(); }catch(err){} }
+  }, {passive:false});
+  host.addEventListener('touchend', function(){
+    var s=swipeStart; swipeStart=null;
+    if(!s || !s.locked){ paneReset(); return; }
+    var dx=s.dx||0, moved=false;
+    if(dx<=-SWIPE_MIN) moved=swipeTab(1);         /* 왼쪽으로 밀면 다음 탭 */
+    else if(dx>=SWIPE_MIN) moved=swipeTab(-1);    /* 오른쪽으로 밀면 이전 탭 */
+    if(!moved) paneReset(); else swipePane=null;
+  }, {passive:true});
+  host.addEventListener('touchcancel', function(){ swipeStart=null; paneReset(); }, {passive:true});
+}
+
 /* ================= 매니페스트(홈 화면 추가) ================= */
 function registerManifest(){
   try{
@@ -1643,6 +1766,7 @@ function boot(){
   renderAll();
   setTab('input');
   bindEvents();
+  bindSwipe();
   /* 정적 manifest.webmanifest 사용 (registerManifest 생략) */
 }
 
