@@ -1629,7 +1629,8 @@ function swipeBlocked(node){
     var cls=el.className;
     if(cls && cls.baseVal!=null) cls=cls.baseVal;
     cls=' '+String(cls||'')+' ';
-    if(cls.indexOf(' wheel ')>-1 || cls.indexOf(' wscroll ')>-1 || cls.indexOf(' chips ')>-1 || cls.indexOf(' chip ')>-1) return true;
+    /* 가로 스크롤 태그 줄은 탭 전환으로 잡지 않음 (휠은 세로 전용이라 방향 조건으로 걸러짐) */
+    if(cls.indexOf(' chips ')>-1 || cls.indexOf(' chip ')>-1) return true;
     /* 가로로 넘치는 영역(가로 스크롤)은 탭 전환 대상에서 제외 */
     var st=null;
     try{ st=window.getComputedStyle?getComputedStyle(el):null; }catch(e){ st=null; }

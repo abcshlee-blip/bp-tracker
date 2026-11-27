@@ -1,5 +1,5 @@
 /* 혈압 일지 — 오프라인 우선 Service Worker */
-const CACHE = 'bp-tracker-v7';
+const CACHE = 'bp-tracker-v8';
 const ASSETS = [
   './',
   './index.html',
