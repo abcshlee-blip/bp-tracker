@@ -785,17 +785,21 @@ function focusSelectAll(inp){
 }
 
 /* ================= 입력 탭 렌더 ================= */
-var PRESET_TAGS=['아침','점심','저녁','운동후','약복용','공복','식후','자기전'];
+/* 입력 화면에 늘 보이는 고정 태그. 여기 없는 태그는 기록 데이터에 남아 있어도
+   선택 목록에는 다시 나타나지 않는다. (기록의 tags 필드는 그대로 보존) */
+var PRESET_TAGS=['운동후','혈압약 복용후','공복','식후','왼쪽팔 | 앉은상태 | 소주1병','30분후','1시간후','1시간 반후','2시간후'];
 function allTags(){
   var out=PRESET_TAGS.slice();
-  (db.settings.tags||[]).forEach(function(t){ if(out.indexOf(t)<0) out.push(t); });
-  db.records.forEach(function(r){ (r.tags||[]).forEach(function(t){ if(t && out.indexOf(t)<0) out.push(t); }); });
+  (db.settings.tags||[]).forEach(function(t){
+    t=String(t==null?'':t).trim();
+    if(t && out.indexOf(t)<0) out.push(t);
+  });
   return out;
 }
 function renderChips(){
   var host=$('quickChips'); if(!host) return;
   var h='';
-  allTags().slice(0,16).forEach(function(t){
+  allTags().slice(0,24).forEach(function(t){
     h+='<button class="chip'+(S.tags.indexOf(t)>=0?' on':'')+'" data-act="toggle-tag" data-tag="'+esc(t)+'">'+esc(t)+'</button>';
   });
   h+='<button class="chip add" data-act="open-tags">\uFF0B 태그</button>';
@@ -1073,7 +1077,7 @@ function renderSettings(){
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
     + '</div></div>';
   h+='<div class="secTitle">정보</div><div class="card rows">'
-    + srowHTML('about','info','앱 정보','혈압 일지 v1.2 · 오프라인 사용')
+    + srowHTML('about','info','앱 정보','혈압 일지 v1.3 · 오프라인 사용')
     + '</div>';
   h+='<p class="disclaimer">이 앱은 개인 기록용입니다. 약 복용이나 치료는 반드시 의사와 상의하세요.</p>';
   host.innerHTML=h;
@@ -1294,9 +1298,9 @@ function seedDemo(){
   var base=new Date();
   function day(off){ return isoOf(new Date(base.getFullYear(), base.getMonth(), base.getDate()-off)); }
   var demo=[
-    {date:day(0), time:'06:44', sys:116, dia:88, bpm:85, tags:['아침'], memo:''},
-    {date:day(1), time:'07:06', sys:118, dia:90, bpm:83, tags:['아침'], memo:''},
-    {date:day(2), time:'20:39', sys:119, dia:89, bpm:80, tags:['저녁'], memo:''},
+    {date:day(0), time:'06:44', sys:116, dia:88, bpm:85, tags:['공복'], memo:''},
+    {date:day(1), time:'07:06', sys:118, dia:90, bpm:83, tags:['공복'], memo:''},
+    {date:day(2), time:'20:39', sys:119, dia:89, bpm:80, tags:['식후'], memo:''},
     {date:day(2), time:'09:29', sys:112, dia:85, bpm:85, tags:[], memo:''},
     {date:day(3), time:'20:32', sys:96, dia:70, bpm:83, tags:[], memo:''}
   ];
@@ -1475,7 +1479,7 @@ function copySheetText(){
 function openAboutSheet(){
   openSheet('<div class="sheetHead"><b>앱 정보</b><button data-act="close-sheet" aria-label="닫기">✕</button></div>'
     + '<div class="sheetBody"><div class="infoCard" style="padding:0 0 6px">'
-    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.2</span></div>'
+    + '<div class="kv"><span>앱</span><span>혈압 일지 v1.3</span></div>'
     + '<div class="kv"><span>기록</span><span>'+db.records.length+'건</span></div>'
     + '<div class="kv"><span>저장 크기</span><span>'+esc(bytesHint())+'</span></div>'
     + '<div class="kv"><span>저장 위치</span><span>이 기기 브라우저</span></div>'
